@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mahabhoj Caterer Chatbot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { margin:0; font-family: Arial, sans-serif; background:#0b1023; color:#eee; }
+
+    .chatbot-widget {
+      position:fixed; bottom:0; right:20px;
+      width:340px; height:420px;
+      border:1px solid #333; border-radius:8px 8px 0 0;
+      display:flex; flex-direction:column;
+      background:#111;
+      transition:height 0.3s ease, width 0.3s ease;
+      z-index: 9999;
+    }
+    .chatbot-widget.collapsed { height:44px; width:220px; }
+
+    .header {
+      background:#22c55e; color:#06280f; font-weight:bold;
+      padding:8px 12px; display:flex; justify-content:space-between; align-items:center;
+      cursor:pointer;
+    }
+    .badge { width:10px; height:10px; border-radius:50%; background:#ef4444; display:none; }
+    .toggle-btn { background:#0b1222; color:#fff; border:none; border-radius:6px; padding:4px 8px; cursor:pointer; }
+
+    .chatbot-body { display:flex; flex-direction:column; flex:1; min-height:0; }
+    .messages { flex:1; overflow-y:auto; padding:10px; }
+    .msg { margin:5px 0; }
+    .msg.user { text-align:right; }
+    .composer { display:flex; border-top:1px solid #333; padding:8px; gap:6px; background:#121212; }
+    .composer input { flex:1; padding:8px; border:1px solid #333; border-radius:6px; background:#0b1222; color:#fff; }
+    .composer button { padding:8px 10px; border:none; background:#22c55e; color:#06280f; font-weight:bold; cursor:pointer; border-radius:6px; }
+    .clear-btn { background:#ef4444; color:#fff; }
+  </style>
+</head>
+<body>
+
+<div class="chatbot-widget collapsed" id="chatbotWidget">
+  <div class="header" id="chatbotHeader">
+    <span>💬 Mahabhoj Caterer</span>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div class="badge" id="notifyBadge"></div>
+      <button class="toggle-btn" id="toggleBtn">+</button>
+    </div>
+  </div>
+  <div class="chatbot-body">
+    <div class="messages" id="messages"></div>
+    <div class="composer">
+      <input id="userInput" type="text" placeholder="Type a message...">
+      <button id="sendBtn">Send</button>
+      <button class="clear-btn" id="clearBtn">Clear</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const widget   = document.getElementById('chatbotWidget');
+  const header   = document.getElementById('chatbotHeader');
+  const toggleBtn= document.getElementById('toggleBtn');
+  const notify   = document.getElementById('notifyBadge');
+  const messages = document.getElementById('messages');
+  const input    = document.getElementById('userInput');
+  const sendBtn  = document.getElementById('sendBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  function setToggleLabel(){
+    toggleBtn.textContent = widget.classList.contains('collapsed') ? '+' : '−';
+  }
+  function toggleWidget(){
+    widget.classList.toggle('collapsed');
+    setToggleLabel();
+    if(!widget.classList.contains('collapsed')) notify.style.display='none';
+  }
+  toggleBtn.addEventListener('click', e=>{ e.stopPropagation(); toggleWidget(); });
+  header.addEventListener('click', toggleWidget);
+
+  function addMsg(text, from){
+    const div = document.createElement('div');
+    div.className = 'msg ' + from.toLowerCase();
+    div.textContent = from + ": " + text;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    if(from==='Bot' && widget.classList.contains('collapsed')){
+      notify.style.display='inline-block';
+    }
+  }
+  function botReply(text){ addMsg(text,'Bot'); }
+
+  // Clear chat
+  clearBtn.addEventListener('click', function(){
+    messages.innerHTML = '';
+    botReply("Chat cleared. You can start a new conversation.");
+  });
+
+  // Simple NLP-like interpretation with synonyms
+  function interpretMessage(text){
+    const lower = text.toLowerCase();
+
+    // Expand synonyms and phrasing
+    const isVeg = /(veg\b|vegetarian|paneer|dal|pulao veg|veg thali)/.test(lower);
+    const isNon = /(non[\s-]?veg|chicken|fish|mutton|meat|egg curry|nonveg)/.test(lower);
+    const isPrice = /(price|cost|rate|charges|how much|total|estimate|quotation|quote)/.test(lower);
+    const isLocation = /(location|area|service area|nearby|where serve|coverage)/.test(lower);
+    const isContact = /(email|contact|phone|mobile|number|call)/.test(lower);
+    const isItems = /(item|items|what in plate|plate items|menu detail|thali)/.test(lower);
+
+    // Detect any numeric count with common words
+    const plateMatch = lower.match(/(\d+)\s*(plate|plates|servings|guests|people|heads|persons)/);
+    const plateCount = plateMatch ? parseInt(plateMatch[1],10) : null;
+
+    return { isVeg, isNon, isPrice, isLocation, isContact, isItems, plateCount, lower };
+  }
+
+  function send(){
+    const text = input.value.trim();
+    if(!text) return;
+    addMsg(text,'You');
+    input.value = '';
+
+    const { isVeg, isNon, isPrice, isLocation, isContact, isItems, plateCount, lower } = interpretMessage(text);
+
+    // Plate count calculation (requires veg OR non-veg)
+    if(plateCount){
+      if(isVeg && !isNon){
+        const perPlate = 250;
+        const total = plateCount * perPlate;
+        botReply(`Veg catering for ${plateCount} plates → ₹${total.toLocaleString('en-IN')} (₹${perPlate} per plate).
+Note: This is a probable estimate. Prices may vary according to present market rates and depending on which items are included or excluded in each plate.`);
+        return;
+      } else if(isNon && !isVeg){
+        const perPlate = 500;
+        const total = plateCount * perPlate;
+        botReply(`Non‑veg catering for ${plateCount} plates → ₹${total.toLocaleString('en-IN')} (₹${perPlate} per plate).
+Note: This is a probable estimate. Prices may vary according to present market rates and depending on which items are included or excluded in each plate.`);
+        return;
+      } else {
+        botReply("Please mention Veg or Non‑veg for the plate calculation (e.g., “price for 200 plates veg”).");
+        return;
+      }
+    }
+
+    // Items in plate (illustrative only, require explicit veg OR non-veg)
+    if(isItems){
+      if(isVeg && !isNon){
+        botReply(`Items in a standard Veg plate (illustrative only, not exact):
+- Starter: Veg cutlet / Paneer tikka
+- Main: Paneer curry, Mixed veg, Dal, Rice/Pulao, Roti
+- Dessert: Rasgulla / Mishti doi
+
+Note: These items are imaginable examples. Please consult Mahabhoj Caterer directly to confirm the actual items included and to fix the final plate price.`);
+        return;
+      } else if(isNon && !isVeg){
+        botReply(`Items in a standard Non‑veg plate (illustrative only, not exact):
+- Starter: Chicken pakora / Fish finger
+- Main: Chicken curry / Fish curry, Dal, Rice, Roti
+- Dessert: Rasmalai / Mishti doi
+
+Note: These items are imaginable examples. Please consult Mahabhoj Caterer directly to confirm the actual items included and to fix the final plate price.`);
+        return;
+      } else {
+        botReply("Please specify Veg or Non‑veg to show the example plate items.");
+        return;
+      }
+    }
+
+    // Contact info
+    if(isContact){
+      botReply("Please visit the official Mahabhoj Caterer website to find the contact number and email.");
+      return;
+    }
+
+    // Service locations
+    if(isLocation){
+      botReply("Mahabhoj Caterer serves Chandannagar and nearby areas such as Chinsurah, Bandel, Uttarpara, Serampore, and Bhadreswar.");
+      return;
+    }
+
+    // General pricing (range)
+    if(isPrice){
+      // If user hinted at veg/non without count, still show ranges
+      if(isVeg && !isNon){
+        botReply("Veg per plate: ₹250–₹300. Note: Final price varies by market rates and exact items included/excluded.");
+      } else if(isNon && !isVeg){
+        botReply("Non‑veg per plate: ₹500–₹800. Note: Final price varies by market rates and exact items included/excluded.");
+      } else {
+        botReply("Veg ₹250–₹300 • Non‑veg ₹500–₹800 per plate. Note: Prices vary with market rates and included/excluded items.");
+      }
+      return;
+    }
+
+    // Helpful nudges if they mention chicken/fish without “non-veg”
+    if(!isItems && !isPrice && /(chicken|fish|mutton)/.test(lower)){
+      botReply("Did you mean Non‑veg? You can ask “items in non‑veg plate” or “price for 150 plates non‑veg”.");
+      return;
+    }
+
+    // Default fallback
+    botReply("I can help with veg/non‑veg plate items (illustrative), pricing and estimates, service locations, or contact info via the website.");
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
+
+  botReply("Welcome to Mahabhoj Caterer chatbot. Ask about menu items (veg/non‑veg), pricing/estimates, service locations, or contact info!");
+  setToggleLabel();
+});
+</script>
+</body>
+</html>
