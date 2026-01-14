@@ -1,213 +1,265 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Mahabhoj Caterer Chatbot</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { margin:0; font-family: Arial, sans-serif; background:#0b1023; color:#eee; }
-
-    .chatbot-widget {
-      position:fixed; bottom:0; right:20px;
-      width:340px; height:420px;
-      border:1px solid #333; border-radius:8px 8px 0 0;
-      display:flex; flex-direction:column;
-      background:#111;
-      transition:height 0.3s ease, width 0.3s ease;
-      z-index: 9999;
-    }
-    .chatbot-widget.collapsed { height:44px; width:220px; }
-
-    .header {
-      background:#22c55e; color:#06280f; font-weight:bold;
-      padding:8px 12px; display:flex; justify-content:space-between; align-items:center;
-      cursor:pointer;
-    }
-    .badge { width:10px; height:10px; border-radius:50%; background:#ef4444; display:none; }
-    .toggle-btn { background:#0b1222; color:#fff; border:none; border-radius:6px; padding:4px 8px; cursor:pointer; }
-
-    .chatbot-body { display:flex; flex-direction:column; flex:1; min-height:0; }
-    .messages { flex:1; overflow-y:auto; padding:10px; }
-    .msg { margin:5px 0; }
-    .msg.user { text-align:right; }
-    .composer { display:flex; border-top:1px solid #333; padding:8px; gap:6px; background:#121212; }
-    .composer input { flex:1; padding:8px; border:1px solid #333; border-radius:6px; background:#0b1222; color:#fff; }
-    .composer button { padding:8px 10px; border:none; background:#22c55e; color:#06280f; font-weight:bold; cursor:pointer; border-radius:6px; }
-    .clear-btn { background:#ef4444; color:#fff; }
-  </style>
+<meta charset="UTF-8" />
+<title>Mahabhoj Caterer - Chat Bot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body {
+    margin: 0;
+    background: #f3f4f6;
+    font-family: "Segoe UI", Arial, sans-serif;
+  }
+  #chatbot {
+    position: fixed;
+    top: 50px;
+    left: 50px;
+    width: 380px;
+    height: 560px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    display: flex;
+    flex-direction: column;
+    z-index: 9999;
+    transition: top 0.2s ease, left 0.2s ease;
+  }
+  #header {
+    background: #1E3A8A;
+    color: #fff;
+    padding: 12px;
+    cursor: move;
+    user-select: none;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+  #messages {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    background: #F9FAFB;
+    white-space: pre-wrap;
+    line-height: 1.45;
+  }
+  #inputArea {
+    display: flex;
+    border-top: 1px solid #ccc;
+  }
+  #inputArea input {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    outline: none;
+    font-size: 14px;
+  }
+  #inputArea button {
+    background: #1E3A8A;
+    color: #fff;
+    border: none;
+    padding: 0 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #inputArea button:hover {
+    background: #0D9488;
+  }
+</style>
 </head>
 <body>
-
-<div class="chatbot-widget collapsed" id="chatbotWidget">
-  <div class="header" id="chatbotHeader">
-    <span>💬 Mahabhoj Caterer</span>
-    <div style="display:flex; align-items:center; gap:8px;">
-      <div class="badge" id="notifyBadge"></div>
-      <button class="toggle-btn" id="toggleBtn">+</button>
-    </div>
-  </div>
-  <div class="chatbot-body">
-    <div class="messages" id="messages"></div>
-    <div class="composer">
-      <input id="userInput" type="text" placeholder="Type a message...">
+  <div id="chatbot">
+    <div id="header">MAHABHOJ CATERER - CHAT BOT</div>
+    <div id="messages"></div>
+    <div id="inputArea">
+      <input id="input" type="text" placeholder="Type your message..." />
       <button id="sendBtn">Send</button>
-      <button class="clear-btn" id="clearBtn">Clear</button>
     </div>
   </div>
-</div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  const widget   = document.getElementById('chatbotWidget');
-  const header   = document.getElementById('chatbotHeader');
-  const toggleBtn= document.getElementById('toggleBtn');
-  const notify   = document.getElementById('notifyBadge');
-  const messages = document.getElementById('messages');
-  const input    = document.getElementById('userInput');
-  const sendBtn  = document.getElementById('sendBtn');
-  const clearBtn = document.getElementById('clearBtn');
-
-  function setToggleLabel(){
-    toggleBtn.textContent = widget.classList.contains('collapsed') ? '+' : '−';
-  }
-  function toggleWidget(){
-    widget.classList.toggle('collapsed');
-    setToggleLabel();
-    if(!widget.classList.contains('collapsed')) notify.style.display='none';
-  }
-  toggleBtn.addEventListener('click', e=>{ e.stopPropagation(); toggleWidget(); });
-  header.addEventListener('click', toggleWidget);
-
-  function addMsg(text, from){
+  const messagesEl = document.getElementById('messages');
+  function addMsg(text, sender){
     const div = document.createElement('div');
-    div.className = 'msg ' + from.toLowerCase();
-    div.textContent = from + ": " + text;
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
-    if(from==='Bot' && widget.classList.contains('collapsed')){
-      notify.style.display='inline-block';
+    div.textContent = sender + ": " + text;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+  function bot(text){ addMsg(text, "Bot"); }
+
+  // Intent detection with quantity, contact, and service area handling
+  function respond(text){
+    const t = text.toLowerCase();
+
+    // Extract number of plates if mentioned
+    const match = t.match(/(\d+)\s*plate/);
+    const qty = match ? parseInt(match[1]) : null;
+
+    // Prices
+    const vegPrice = 200;
+    const nonPrice = 300;
+
+    // Contact intent
+    if(t.includes("contact") || t.includes("phone") || t.includes("number")){
+      return "You can find the contact number on our website.";
     }
+
+    // Service area intent
+    if(
+      (t.includes("where") || t.includes("area") || t.includes("location")) &&
+      (t.includes("serve") || t.includes("service"))
+    ){
+      return "We serve Chandannagar and nearby areas.";
+    }
+
+    // Combined query (veg + non‑veg with quantity)
+    if(qty && t.includes("veg") && t.includes("non")){
+      return `Total cost for ${qty} veg plates is ₹${qty * vegPrice}, and ${qty} non‑veg plates is ₹${qty * nonPrice}.`;
+    }
+
+    // Non‑veg first (avoid "non veg" matching "veg")
+    if(t.includes("non veg") || t.includes("non-veg") || t.includes("chicken") || t.includes("mutton") || t.includes("fish")){
+      if(qty){
+        return `Total cost for ${qty} non‑veg plates is ₹${qty * nonPrice}.`;
+      }
+      if(t.includes("price") || t.includes("cost") || t.includes("rate")){
+        return `Non‑veg plate costs ₹${nonPrice}.`;
+      }
+      return "Our non‑veg menu includes chicken, mutton, and fish.";
+    }
+
+    // Veg intent
+    if(t.includes("veg") || t.includes("paneer") || t.includes("dal") || t.includes("sabzi")){
+      if(qty){
+        return `Total cost for ${qty} veg plates is ₹${qty * vegPrice}.`;
+      }
+      if(t.includes("price") || t.includes("cost") || t.includes("rate")){
+        return `Veg plate costs ₹${vegPrice}.`;
+      }
+      return "Our veg menu includes paneer, dal, and sabzi.";
+    }
+
+    // Menu intent
+    if(t.includes("menu") || t.includes("items") || t.includes("dishes")){
+      return "Our menu includes both veg and non‑veg dishes.";
+    }
+
+    // Price intent (generic)
+    if(t.includes("price") || t.includes("cost") || t.includes("rate")){
+      return `Veg plates start at ₹${vegPrice}, Non‑veg plates start at ₹${nonPrice}.`;
+    }
+
+    // Fallback
+    return "Please ask about veg items, non‑veg items, prices, contact, or service area.";
   }
-  function botReply(text){ addMsg(text,'Bot'); }
 
-  // Clear chat
-  clearBtn.addEventListener('click', function(){
-    messages.innerHTML = '';
-    botReply("Chat cleared. You can start a new conversation.");
-  });
-
-  // Simple NLP-like interpretation with synonyms
-  function interpretMessage(text){
-    const lower = text.toLowerCase();
-
-    // Expand synonyms and phrasing
-    const isVeg = /(veg\b|vegetarian|paneer|dal|pulao veg|veg thali)/.test(lower);
-    const isNon = /(non[\s-]?veg|chicken|fish|mutton|meat|egg curry|nonveg)/.test(lower);
-    const isPrice = /(price|cost|rate|charges|how much|total|estimate|quotation|quote)/.test(lower);
-    const isLocation = /(location|area|service area|nearby|where serve|coverage)/.test(lower);
-    const isContact = /(email|contact|phone|mobile|number|call)/.test(lower);
-    const isItems = /(item|items|what in plate|plate items|menu detail|thali)/.test(lower);
-
-    // Detect any numeric count with common words
-    const plateMatch = lower.match(/(\d+)\s*(plate|plates|servings|guests|people|heads|persons)/);
-    const plateCount = plateMatch ? parseInt(plateMatch[1],10) : null;
-
-    return { isVeg, isNon, isPrice, isLocation, isContact, isItems, plateCount, lower };
-  }
-
-  function send(){
+  document.getElementById('sendBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('input');
     const text = input.value.trim();
     if(!text) return;
-    addMsg(text,'You');
-    input.value = '';
+    addMsg(text, "You");
+    input.value = "";
+    bot(respond(text));
+  });
 
-    const { isVeg, isNon, isPrice, isLocation, isContact, isItems, plateCount, lower } = interpretMessage(text);
+  document.getElementById('input').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('sendBtn').click();
+  });
 
-    // Plate count calculation (requires veg OR non-veg)
-    if(plateCount){
-      if(isVeg && !isNon){
-        const perPlate = 250;
-        const total = plateCount * perPlate;
-        botReply(`Veg catering for ${plateCount} plates → ₹${total.toLocaleString('en-IN')} (₹${perPlate} per plate).
-Note: This is a probable estimate. Prices may vary according to present market rates and depending on which items are included or excluded in each plate.`);
-        return;
-      } else if(isNon && !isVeg){
-        const perPlate = 500;
-        const total = plateCount * perPlate;
-        botReply(`Non‑veg catering for ${plateCount} plates → ₹${total.toLocaleString('en-IN')} (₹${perPlate} per plate).
-Note: This is a probable estimate. Prices may vary according to present market rates and depending on which items are included or excluded in each plate.`);
-        return;
-      } else {
-        botReply("Please mention Veg or Non‑veg for the plate calculation (e.g., “price for 200 plates veg”).");
-        return;
-      }
+  // Draggable + Snap-to-corner
+  (function(){
+    const el = document.getElementById('chatbot');
+    const header = document.getElementById('header');
+    let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+    function getRect(){ return el.getBoundingClientRect(); }
+
+    function setPosition(left, top){
+      const rect = getRect();
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const maxLeft = w - rect.width;
+      const maxTop = h - rect.height;
+      el.style.left = Math.max(0, Math.min(left, maxLeft)) + "px";
+      el.style.top = Math.max(0, Math.min(top, maxTop)) + "px";
     }
 
-    // Items in plate (illustrative only, require explicit veg OR non-veg)
-    if(isItems){
-      if(isVeg && !isNon){
-        botReply(`Items in a standard Veg plate (illustrative only, not exact):
-- Starter: Veg cutlet / Paneer tikka
-- Main: Paneer curry, Mixed veg, Dal, Rice/Pulao, Roti
-- Dessert: Rasgulla / Mishti doi
-
-Note: These items are imaginable examples. Please consult Mahabhoj Caterer directly to confirm the actual items included and to fix the final plate price.`);
-        return;
-      } else if(isNon && !isVeg){
-        botReply(`Items in a standard Non‑veg plate (illustrative only, not exact):
-- Starter: Chicken pakora / Fish finger
-- Main: Chicken curry / Fish curry, Dal, Rice, Roti
-- Dessert: Rasmalai / Mishti doi
-
-Note: These items are imaginable examples. Please consult Mahabhoj Caterer directly to confirm the actual items included and to fix the final plate price.`);
-        return;
-      } else {
-        botReply("Please specify Veg or Non‑veg to show the example plate items.");
-        return;
-      }
+    function onDown(clientX, clientY){
+      dragging = true;
+      const rect = getRect();
+      startX = clientX;
+      startY = clientY;
+      startLeft = rect.left;
+      startTop = rect.top;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', onUp);
     }
 
-    // Contact info
-    if(isContact){
-      botReply("Please visit the official Mahabhoj Caterer website to find the contact number and email.");
-      return;
+    function onMove(e){
+      if(!dragging) return;
+      e.preventDefault();
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      setPosition(startLeft + dx, startTop + dy);
     }
 
-    // Service locations
-    if(isLocation){
-      botReply("Mahabhoj Caterer serves Chandannagar and nearby areas such as Chinsurah, Bandel, Uttarpara, Serampore, and Bhadreswar.");
-      return;
+    function onTouchMove(e){
+      if(!dragging) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      setPosition(startLeft + dx, startTop + dy);
     }
 
-    // General pricing (range)
-    if(isPrice){
-      // If user hinted at veg/non without count, still show ranges
-      if(isVeg && !isNon){
-        botReply("Veg per plate: ₹250–₹300. Note: Final price varies by market rates and exact items included/excluded.");
-      } else if(isNon && !isVeg){
-        botReply("Non‑veg per plate: ₹500–₹800. Note: Final price varies by market rates and exact items included/excluded.");
-      } else {
-        botReply("Veg ₹250–₹300 • Non‑veg ₹500–₹800 per plate. Note: Prices vary with market rates and included/excluded items.");
-      }
-      return;
+    function snapToCorner(){
+      const rect = getRect();
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const topDist = rect.top;
+      const leftDist = rect.left;
+      const rightDist = w - rect.right;
+      const bottomDist = h - rect.bottom;
+      const tl = topDist + leftDist;
+      const tr = topDist + rightDist;
+      const bl = bottomDist + leftDist;
+      const br = bottomDist + rightDist;
+      const min = Math.min(tl, tr, bl, br);
+      let targetLeft = 0, targetTop = 0;
+      if(min === tl){ targetLeft = 0; targetTop = 0; }
+      else if(min === tr){ targetLeft = w - rect.width; targetTop = 0; }
+      else if(min === bl){ targetLeft = 0; targetTop = h - rect.height; }
+      else { targetLeft = w - rect.width; targetTop = h - rect.height; }
+      setPosition(targetLeft, targetTop);
     }
 
-    // Helpful nudges if they mention chicken/fish without “non-veg”
-    if(!isItems && !isPrice && /(chicken|fish|mutton)/.test(lower)){
-      botReply("Did you mean Non‑veg? You can ask “items in non‑veg plate” or “price for 150 plates non‑veg”.");
-      return;
+    function onUp(){
+      if(!dragging) return;
+      dragging = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onUp);
+      snapToCorner();
     }
 
-    // Default fallback
-    botReply("I can help with veg/non‑veg plate items (illustrative), pricing and estimates, service locations, or contact info via the website.");
-  }
+    header.addEventListener('mousedown', (e)=> onDown(e.clientX, e.clientY));
+    header.addEventListener('touchstart', (e)=>{
+      const t = e.touches[0];
+      onDown(t.clientX, t.clientY);
+    }, { passive: true });
 
-  sendBtn.addEventListener('click', send);
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
+    // Keep inside viewport on resize
+    window.addEventListener('resize', ()=>{
+      const rect = getRect();
+      setPosition(rect.left, rect.top);
+    });
+  })();
 
-  botReply("Welcome to Mahabhoj Caterer chatbot. Ask about menu items (veg/non‑veg), pricing/estimates, service locations, or contact info!");
-  setToggleLabel();
-});
+  // Greeting
+  bot("🍽️ Welcome to Mahabhoj Caterer Chatbot! Ask me about veg, non‑veg, prices, totals, contact, or service area. Drag me around!");
 </script>
 </body>
 </html>
